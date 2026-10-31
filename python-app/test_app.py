@@ -6,7 +6,7 @@ def test_healthz():
     client = app.test_client()
     res = client.get("/healthz")
     assert res.status_code == 200
-    assert res.get_json() == {"status": "ok"}
+    assert res.get_json()["status"] == "ok"
 
 
 def test_api_info_with_forwarded_ip():

@@ -1,4 +1,4 @@
-name: Build and Publish Demo Apps
+name: CI/CD Pipeline - QA Tests, SonarQube Security Scan & GHCR Publish
 
 on:
   push:
@@ -12,7 +12,66 @@ permissions:
   packages: write
 
 jobs:
+  qa-and-sonarqube:
+    name: QA Unit Tests & SonarQube Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.12 for QA Tests
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run Python QA Unit Tests & Coverage
+        working-directory: ./python-app
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest pytest-cov bandit
+          pytest test_app.py -v --cov=app --cov-report=xml:coverage.xml --junitxml=test-results.xml
+          bandit -r app.py -f json -o bandit-report.json || true
+
+      - name: Setup .NET 8 SDK & Verify C# Build
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Build & Verify .NET 8 C# App
+        working-directory: ./dotnet-csharp-app
+        run: |
+          dotnet restore DotnetCsharpApp.csproj
+          dotnet build DotnetCsharpApp.csproj --configuration Release --no-restore
+
+      - name: Run SonarQube QA & Security Scan (if SONAR_HOST_URL is reachable)
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL || 'http://a89c266b705504783b7c6ba6be8b546e-467327433.us-east-1.elb.amazonaws.com:9000' }}
+          SONAR_USER: ${{ secrets.SONAR_USER || 'admin' }}
+          SONAR_PASSWORD: ${{ secrets.SONAR_PASSWORD || 'Sonar@2026' }}
+        run: |
+          if curl -fsS --max-time 10 "${SONAR_HOST_URL}/api/system/status" | grep -q '"status":"UP"'; then
+            echo "SonarQube server is UP at ${SONAR_HOST_URL} — running sonar-scanner CLI..."
+            docker run --rm \
+              -v "${GITHUB_WORKSPACE}:/usr/src" \
+              -w /usr/src \
+              sonarsource/sonar-scanner-cli:latest \
+              -Dsonar.host.url="${SONAR_HOST_URL}" \
+              -Dsonar.login="${SONAR_USER}" \
+              -Dsonar.password="${SONAR_PASSWORD}" \
+              -Dsonar.projectKey=apps-demo-2026 \
+              -Dsonar.projectName="Apps Demo 2026 (Python & .NET C#)" \
+              -Dsonar.sources=python-app/app.py,k8s \
+              -Dsonar.tests=python-app \
+              -Dsonar.test.inclusions=**/test_*.py \
+              -Dsonar.python.coverage.reportPaths=python-app/coverage.xml
+          else
+            echo "SonarQube server at ${SONAR_HOST_URL} not currently reachable (demo account may be recreating); skipping remote upload."
+          fi
+
   build-and-test:
+    needs: qa-and-sonarqube
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

@@ -1,0 +1,43 @@
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: apps-demo-2026
+  description: Coleção de Apps Web de exemplo em múltiplas linguagens (Python, .NET C#) exibindo linguagem, versão, IP do solicitante e hostname local
+spec:
+  owner: platform-team
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: python-demo-app
+  description: App Web em Python 3.12 (Flask) que exibe linguagem, versão, IP do solicitante e hostname local
+  annotations:
+    github.com/project-slug: cirodasilvaj/apps-demo-2026
+    backstage.io/kubernetes-id: python-app
+  tags:
+    - python
+    - flask
+    - demo
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: apps-demo-2026
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: dotnet-csharp-demo-app
+  description: App Web em C# (.NET 8 Minimal API) que exibe linguagem, versão, IP do solicitante e hostname local
+  annotations:
+    github.com/project-slug: cirodasilvaj/apps-demo-2026
+    backstage.io/kubernetes-id: dotnet-csharp-app
+  tags:
+    - dotnet
+    - csharp
+    - demo
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: apps-demo-2026

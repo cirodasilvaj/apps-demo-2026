@@ -1,0 +1,63 @@
+name: Build and Publish Demo Apps
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - name: python-app
+            context: ./python-app
+          - name: dotnet-csharp-app
+            context: ./dotnet-csharp-app
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker image (${{ matrix.app.name }})
+        run: |
+          IMAGE="ghcr.io/cirodasilvaj/apps-demo-2026/${{ matrix.app.name }}"
+          docker build -t "${IMAGE}:latest" -t "${IMAGE}:${{ github.sha }}" "${{ matrix.app.context }}"
+
+      - name: Smoke test container (${{ matrix.app.name }})
+        run: |
+          IMAGE="ghcr.io/cirodasilvaj/apps-demo-2026/${{ matrix.app.name }}:latest"
+          docker run -d --name test-app -p 8080:8080 "${IMAGE}"
+          for i in $(seq 1 15); do
+            if curl -fsS http://127.0.0.1:8080/healthz >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          echo "=== /api/info JSON ==="
+          curl -fsS -H "X-Forwarded-For: 203.0.113.42" http://127.0.0.1:8080/api/info | jq .
+          echo "=== / HTML Preview ==="
+          curl -fsS -H "X-Forwarded-For: 203.0.113.42" http://127.0.0.1:8080/ | grep -E "value|title"
+          docker rm -f test-app
+
+      - name: Push Docker image to GHCR (${{ matrix.app.name }})
+        if: github.event_name != 'pull_request'
+        run: |
+          IMAGE="ghcr.io/cirodasilvaj/apps-demo-2026/${{ matrix.app.name }}"
+          docker push "${IMAGE}:latest"
+          docker push "${IMAGE}:${{ github.sha }}"

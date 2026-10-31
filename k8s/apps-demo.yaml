@@ -1,0 +1,146 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: apps-demo
+  labels:
+    app.kubernetes.io/part-of: apps-demo-2026
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-app
+  namespace: apps-demo
+  labels:
+    app.kubernetes.io/name: python-app
+    app.kubernetes.io/part-of: apps-demo-2026
+    backstage.io/kubernetes-id: python-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: python-app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: python-app
+        app.kubernetes.io/part-of: apps-demo-2026
+        backstage.io/kubernetes-id: python-app
+    spec:
+      containers:
+        - name: python-app
+          image: ghcr.io/cirodasilvaj/apps-demo-2026/python-app:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: APP_VERSION
+              value: "1.0.0"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: python-app
+  namespace: apps-demo
+  labels:
+    app.kubernetes.io/name: python-app
+    app.kubernetes.io/part-of: apps-demo-2026
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: python-app
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dotnet-csharp-app
+  namespace: apps-demo
+  labels:
+    app.kubernetes.io/name: dotnet-csharp-app
+    app.kubernetes.io/part-of: apps-demo-2026
+    backstage.io/kubernetes-id: dotnet-csharp-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dotnet-csharp-app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dotnet-csharp-app
+        app.kubernetes.io/part-of: apps-demo-2026
+        backstage.io/kubernetes-id: dotnet-csharp-app
+    spec:
+      containers:
+        - name: dotnet-csharp-app
+          image: ghcr.io/cirodasilvaj/apps-demo-2026/dotnet-csharp-app:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: APP_VERSION
+              value: "1.0.0"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dotnet-csharp-app
+  namespace: apps-demo
+  labels:
+    app.kubernetes.io/name: dotnet-csharp-app
+    app.kubernetes.io/part-of: apps-demo-2026
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: dotnet-csharp-app
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080

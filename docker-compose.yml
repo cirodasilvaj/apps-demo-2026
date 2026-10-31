@@ -1,0 +1,24 @@
+services:
+  python-app:
+    build:
+      context: ./python-app
+      dockerfile: Dockerfile
+    container_name: apps-demo-python
+    ports:
+      - "8081:8080"
+    environment:
+      - PORT=8080
+      - APP_VERSION=1.0.0
+    restart: unless-stopped
+
+  dotnet-csharp-app:
+    build:
+      context: ./dotnet-csharp-app
+      dockerfile: Dockerfile
+    container_name: apps-demo-dotnet-csharp
+    ports:
+      - "8082:8080"
+    environment:
+      - PORT=8080
+      - APP_VERSION=1.0.0
+    restart: unless-stopped

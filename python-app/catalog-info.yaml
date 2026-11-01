@@ -5,7 +5,6 @@ metadata:
   title: Python 3.12 Flask Microservice
   description: App Web em Python 3.12 (Flask) instrumentada com Prometheus (/metrics), logs JSON enviados via Fluentd para o Grafana Loki e Quality Gate no SonarQube.
   annotations:
-    github.com/project-slug: cirodasilvaj/apps-demo-2026
     sonarqube.org/project-key: apps-demo-2026
     backstage.io/kubernetes-id: python-app
     backstage.io/kubernetes-namespace: apps-demo
@@ -24,6 +23,9 @@ metadata:
     - grafana
     - k8s
   links:
+    - url: https://github.com/cirodasilvaj/apps-demo-2026/tree/main/python-app
+      title: GitHub Source Code
+      icon: github
     - url: http://python.realhandsonlabs.net
       title: Python 3.12 Live App (Route 53)
       icon: web

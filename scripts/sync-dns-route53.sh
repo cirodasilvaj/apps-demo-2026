@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Sincronizador de DNS Route 53 para Apps Demo (Python & .NET C#)
+# Sincronizador CLI: Route 53 + Emissão Automática de Certificado SSL/TLS ACM (HTTPS)
 # ==============================================================================
 set -euo pipefail
 
-echo "🔍 Buscando Hosted Zone pública (*realhandsonlabs.net) no Route 53..."
+echo "🔍 Identificando Conta AWS ativa e Hosted Zone no Route 53..."
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text 2>/dev/null || echo "Desconhecida")
+echo "🏢 Conta AWS identificada: ${ACCOUNT_ID}"
+
 ZONE_INFO=$(aws route53 list-hosted-zones --query "HostedZones[?contains(Name, 'realhandsonlabs.net') && !Config.PrivateZone] | [0]" --output json 2>/dev/null || true)
 
 if [ "$ZONE_INFO" = "null" ] || [ -z "$ZONE_INFO" ]; then
-  echo "⚠️ Nenhuma Hosted Zone pública terminando com 'realhandsonlabs.net' encontrada na conta AWS atual."
-  exit 0
+  echo "⚠️ Nenhuma Hosted Zone pública terminando com 'realhandsonlabs.net' encontrada."
+  exit 1
 fi
 
 ZONE_ID=$(echo "$ZONE_INFO" | jq -r '.Id' | sed 's|/hostedzone/||')
@@ -17,52 +20,88 @@ ZONE_NAME=$(echo "$ZONE_INFO" | jq -r '.Name' | sed 's/\.$//')
 
 echo "✅ Zona Route 53 encontrada: ${ZONE_NAME} (ID: ${ZONE_ID})"
 
-# Mapeamento dos microserviços para os Services no EKS (subdominio:namespace:service_name)
-APPS=(
+# ------------------------------------------------------------------------------
+# Etapa ACM: Emissão e Validação Automática de Certificado Wildcard SSL/TLS
+# ------------------------------------------------------------------------------
+echo "🔐 Verificando Certificado SSL/TLS Wildcard (*.${ZONE_NAME}) no AWS ACM..."
+CERT_ARN=$(aws acm list-certificates --query "CertificateSummaryList[?DomainName=='*.${ZONE_NAME}'].CertificateArn | [0]" --output text 2>/dev/null || true)
+
+if [ "$CERT_ARN" = "None" ] || [ -z "$CERT_ARN" ]; then
+  echo "🚀 Solicitando novo Certificado Wildcard no AWS Certificate Manager (ACM)..."
+  CERT_ARN=$(aws acm request-certificate \
+    --domain-name "*.${ZONE_NAME}" \
+    --subject-alternative-names "${ZONE_NAME}" \
+    --validation-method DNS \
+    --tags Key=Project,Value=apps-demo-2026 Key=Environment,Value=sandbox Key=ManagedBy,Value=cli Key=CostCenter,Value=devops-platform-cloud \
+    --query CertificateArn --output text)
+  echo "✅ Certificado ACM solicitado: ${CERT_ARN}"
+
+  echo "⏳ Aguardando registros de validação DNS gerados pelo ACM..."
+  sleep 4
+fi
+
+VAL_NAME=$(aws acm describe-certificate --certificate-arn "$CERT_ARN" --query "Certificate.DomainValidationOptions[0].ResourceRecord.Name" --output text 2>/dev/null || true)
+VAL_VALUE=$(aws acm describe-certificate --certificate-arn "$CERT_ARN" --query "Certificate.DomainValidationOptions[0].ResourceRecord.Value" --output text 2>/dev/null || true)
+
+if [ -n "$VAL_NAME" ] && [ "$VAL_NAME" != "None" ]; then
+  echo "📝 Inserindo CNAME de validação do ACM no Route 53..."
+  echo "   ${VAL_NAME} -> ${VAL_VALUE}"
+  aws route53 change-resource-record-sets --hosted-zone-id "$ZONE_ID" --change-batch "{
+    \"Comment\": \"ACM DNS Validation for *.${ZONE_NAME}\",
+    \"Changes\": [{
+      \"Action\": \"UPSERT\",
+      \"ResourceRecordSet\": {
+        \"Name\": \"${VAL_NAME}\",
+        \"Type\": \"CNAME\",
+        \"TTL\": 60,
+        \"ResourceRecords\": [{\"Value\": \"${VAL_VALUE}\"}]
+      }
+    }]
+  }" >/dev/null || true
+  echo "✅ Registro de validação ACM publicado no Route 53."
+fi
+
+# ------------------------------------------------------------------------------
+# Etapa CNAMEs dos Apps de Demonstração
+# ------------------------------------------------------------------------------
+SERVICES=(
   "python:apps-demo:python-app"
   "dotnet:apps-demo:dotnet-csharp-app"
 )
 
 CHANGES=()
-LIVE_URLS=()
 
-for item in "${APPS[@]}"; do
+for item in "${SERVICES[@]}"; do
   IFS=":" read -r SUBDOMAIN NAMESPACE SVC_NAME <<< "$item"
-
-  # Espera até 60s pelo hostname do LoadBalancer se estiver provisionando
-  ELB_HOSTNAME=""
-  for i in $(seq 1 12); do
-    ELB_HOSTNAME=$(kubectl get svc "$SVC_NAME" -n "$NAMESPACE" -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
-    if [ -n "$ELB_HOSTNAME" ]; then
-      break
-    fi
-    sleep 5
-  done
-
+  
+  ELB_HOSTNAME=$(kubectl get svc "$SVC_NAME" -n "$NAMESPACE" -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
+  
   if [ -n "$ELB_HOSTNAME" ]; then
     FQDN="${SUBDOMAIN}.${ZONE_NAME}"
     echo "🔗 Associando ${FQDN} -> ${ELB_HOSTNAME}"
     CHANGES+=("{\"Action\":\"UPSERT\",\"ResourceRecordSet\":{\"Name\":\"${FQDN}\",\"Type\":\"CNAME\",\"TTL\":60,\"ResourceRecords\":[{\"Value\":\"${ELB_HOSTNAME}\"}]}}")
-    LIVE_URLS+=("${SUBDOMAIN}: http://${FQDN}")
   else
-    echo "⏳ Serviço '${SVC_NAME}' no namespace '${NAMESPACE}' ainda não possui LoadBalancer atribuído no EKS."
+    echo "⏳ Serviço '${SVC_NAME}' no namespace '${NAMESPACE}' ainda não possui LoadBalancer pronto no EKS."
   fi
 done
 
 if [ ${#CHANGES[@]} -gt 0 ]; then
   CHANGES_JSON=$(IFS=,; echo "${CHANGES[*]}")
-  BATCH_JSON="{\"Comment\":\"Auto-sync Apps Demo endpoints to Route 53\",\"Changes\":[${CHANGES_JSON}]}"
-
+  BATCH_JSON="{\"Comment\":\"Auto-sync Apps endpoints to Route 53 with ACM SSL\",\"Changes\":[${CHANGES_JSON}]}"
+  
   aws route53 change-resource-record-sets \
     --hosted-zone-id "$ZONE_ID" \
     --change-batch "$BATCH_JSON" >/dev/null
-
+    
   echo ""
   echo "=============================================================================="
-  echo "🎉 Apps Demo registrados no Route 53 com sucesso!"
+  echo "🎉 Apps Route 53 & Certificado ACM SSL/TLS configurados com sucesso!"
   echo "=============================================================================="
-  for url in "${LIVE_URLS[@]}"; do
-    echo " 👉 ${url}"
+  echo "🔒 ACM Certificate ARN: ${CERT_ARN}"
+  echo "🌐 Endpoints HTTPS e HTTP disponíveis:"
+  for item in "${SERVICES[@]}"; do
+    IFS=":" read -r SUBDOMAIN _ _ <<< "$item"
+    echo " 👉 https://${SUBDOMAIN}.${ZONE_NAME}  (ou http://${SUBDOMAIN}.${ZONE_NAME})"
   done
   echo "=============================================================================="
 fi

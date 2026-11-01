@@ -11,7 +11,11 @@ echo "🏢 Conta AWS identificada: ${ACCOUNT_ID}"
 ZONE_INFO=$(aws route53 list-hosted-zones --query "HostedZones[?contains(Name, 'realhandsonlabs.net') && !Config.PrivateZone] | [0]" --output json 2>/dev/null || true)
 
 if [ "$ZONE_INFO" = "null" ] || [ -z "$ZONE_INFO" ]; then
-  echo "⚠️ Nenhuma Hosted Zone pública terminando com 'realhandsonlabs.net' encontrada."
+  ZONE_INFO=$(aws route53 list-hosted-zones --query "HostedZones[!Config.PrivateZone] | [0]" --output json 2>/dev/null || true)
+fi
+
+if [ "$ZONE_INFO" = "null" ] || [ -z "$ZONE_INFO" ]; then
+  echo "⚠️ Nenhuma Hosted Zone pública encontrada."
   exit 1
 fi
 

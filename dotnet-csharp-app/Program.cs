@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,9 +16,33 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 var app = builder.Build();
 app.UseForwardedHeaders();
 
+var startTime = DateTime.UtcNow;
 const string LanguageName = "C# (.NET)";
 var languageVersion = $"{RuntimeInformation.FrameworkDescription} (C# 12 / {RuntimeInformation.OSArchitecture})";
 var appVersion = Environment.GetEnvironmentVariable("APP_VERSION") ?? "1.0.0";
+var fluentdHost = Environment.GetEnvironmentVariable("FLUENTD_HOST") ?? "fluentd.logging.svc.cluster.local";
+var fluentdPort = Environment.GetEnvironmentVariable("FLUENTD_PORT") ?? "24224";
+
+long requestsRoot = 0;
+long requestsApiInfo = 0;
+long requestsHealthz = 0;
+long requestsMetrics = 0;
+
+void EmitFluentdLog(string eventName, string path, string clientIp)
+{
+    var logRecord = new
+    {
+        time = DateTime.UtcNow.ToString("O"),
+        app = "dotnet-csharp-app",
+        language = LanguageName,
+        @event = eventName,
+        path,
+        client_ip = clientIp,
+        hostname = Dns.GetHostName(),
+        fluentd_target = $"{fluentdHost}:{fluentdPort}"
+    };
+    Console.WriteLine(JsonSerializer.Serialize(logRecord));
+}
 
 static string GetClientIp(HttpContext context)
 {
@@ -215,14 +240,43 @@ app.MapGet("/", (HttpContext context) =>
     return Results.Content(html, "text/html; charset=utf-8");
 });
 
-app.MapGet("/api/info", (HttpContext context) => Results.Json(BuildPayload(context)));
-
-app.MapGet("/healthz", () => Results.Json(new
+app.MapGet("/api/info", (HttpContext context) =>
 {
-    status = "ok",
-    language = LanguageName,
-    hostname = Dns.GetHostName()
-}));
+    Interlocked.Increment(ref requestsApiInfo);
+    EmitFluentdLog("api_info_request", "/api/info", GetClientIp(context));
+    return Results.Json(BuildPayload(context));
+});
+
+app.MapGet("/metrics", () =>
+{
+    Interlocked.Increment(ref requestsMetrics);
+    var uptime = (DateTime.UtcNow - startTime).TotalSeconds;
+    var body = string.Join("\n", new[]
+    {
+        "# HELP app_http_requests_total Total HTTP requests handled by the application",
+        "# TYPE app_http_requests_total counter",
+        $"app_http_requests_total{{app=\"dotnet-csharp-app\",language=\"CSharp\",endpoint=\"/\"}} {Interlocked.Read(ref requestsRoot)}",
+        $"app_http_requests_total{{app=\"dotnet-csharp-app\",language=\"CSharp\",endpoint=\"/api/info\"}} {Interlocked.Read(ref requestsApiInfo)}",
+        $"app_http_requests_total{{app=\"dotnet-csharp-app\",language=\"CSharp\",endpoint=\"/healthz\"}} {Interlocked.Read(ref requestsHealthz)}",
+        $"app_http_requests_total{{app=\"dotnet-csharp-app\",language=\"CSharp\",endpoint=\"/metrics\"}} {Interlocked.Read(ref requestsMetrics)}",
+        "# HELP app_uptime_seconds Application uptime in seconds",
+        "# TYPE app_uptime_seconds gauge",
+        $"app_uptime_seconds{{app=\"dotnet-csharp-app\",language=\"CSharp\"}} {uptime:F2}",
+        ""
+    });
+    return Results.Text(body, "text/plain; version=0.0.4");
+});
+
+app.MapGet("/healthz", () =>
+{
+    Interlocked.Increment(ref requestsHealthz);
+    return Results.Json(new
+    {
+        status = "ok",
+        language = LanguageName,
+        hostname = Dns.GetHostName()
+    });
+});
 
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 app.Run($"http://0.0.0.0:{port}");

@@ -9,6 +9,15 @@ def test_healthz():
     assert res.get_json()["status"] == "ok"
 
 
+def test_prometheus_metrics():
+    client = app.test_client()
+    res = client.get("/metrics")
+    assert res.status_code == 200
+    body = res.get_data(as_text=True)
+    assert "app_http_requests_total" in body
+    assert "app_uptime_seconds" in body
+
+
 def test_api_info_with_forwarded_ip():
     client = app.test_client()
     res = client.get("/api/info", headers={"X-Forwarded-For": "198.51.100.77"})

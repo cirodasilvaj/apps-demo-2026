@@ -25,6 +25,13 @@ spec:
         app.kubernetes.io/name: python-app
         app.kubernetes.io/part-of: apps-demo-2026
         backstage.io/kubernetes-id: python-app
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+        fluentd.io/collect: "true"
+        fluentd.io/parser: "json"
+        fluentd.io/destination: "loki"
     spec:
       containers:
         - name: python-app
@@ -38,6 +45,10 @@ spec:
               value: "8080"
             - name: APP_VERSION
               value: "1.0.0"
+            - name: FLUENTD_HOST
+              value: "fluentd.logging.svc.cluster.local"
+            - name: FLUENTD_PORT
+              value: "24224"
           readinessProbe:
             httpGet:
               path: /healthz
@@ -95,6 +106,13 @@ spec:
         app.kubernetes.io/name: dotnet-csharp-app
         app.kubernetes.io/part-of: apps-demo-2026
         backstage.io/kubernetes-id: dotnet-csharp-app
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+        fluentd.io/collect: "true"
+        fluentd.io/parser: "json"
+        fluentd.io/destination: "loki"
     spec:
       containers:
         - name: dotnet-csharp-app
@@ -108,6 +126,10 @@ spec:
               value: "8080"
             - name: APP_VERSION
               value: "1.0.0"
+            - name: FLUENTD_HOST
+              value: "fluentd.logging.svc.cluster.local"
+            - name: FLUENTD_PORT
+              value: "24224"
           readinessProbe:
             httpGet:
               path: /healthz

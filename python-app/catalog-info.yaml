@@ -13,7 +13,7 @@ metadata:
     prometheus.io/path: "/metrics"
     fluentd.io/destination: "loki"
     grafana/dashboard-selector: "tag == 'python-demo-app'"
-    grafana/overview-dashboard: "http://a4d7780eb3b8344ca9b0e68513de8302-556188938.us-east-1.elb.amazonaws.com:3000/d/apps-prometheus-loki/8c87aef"
+    grafana/overview-dashboard: "http://grafana.realhandsonlabs.net/d/apps-prometheus-loki/8c87aef"
   tags:
     - python
     - flask
@@ -24,16 +24,16 @@ metadata:
     - grafana
     - k8s
   links:
-    - url: http://a5c964fc0c9ad45d5b0b5989900658c3-1985306500.us-east-1.elb.amazonaws.com
-      title: Python 3.12 Live App (LoadBalancer)
+    - url: http://python.realhandsonlabs.net
+      title: Python 3.12 Live App (Route 53)
       icon: web
-    - url: http://a5c964fc0c9ad45d5b0b5989900658c3-1985306500.us-east-1.elb.amazonaws.com/metrics
+    - url: http://python.realhandsonlabs.net/metrics
       title: Prometheus Metrics (/metrics)
       icon: gauge
-    - url: http://a4d7780eb3b8344ca9b0e68513de8302-556188938.us-east-1.elb.amazonaws.com:3000/d/apps-prometheus-loki/8c87aef
+    - url: http://grafana.realhandsonlabs.net
       title: Grafana Dashboard (Prometheus & Loki Logs)
       icon: dashboard
-    - url: http://aaf2ca7a1976745e4ab0a1e6d99d64ff-989575390.us-east-1.elb.amazonaws.com:9000/dashboard?id=apps-demo-2026
+    - url: http://sonarqube.realhandsonlabs.net/dashboard?id=apps-demo-2026
       title: SonarQube Quality Gate
       icon: check
 spec:

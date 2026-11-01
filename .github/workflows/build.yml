@@ -45,19 +45,38 @@ jobs:
           dotnet restore DotnetDemoApp.csproj
           dotnet build DotnetDemoApp.csproj --configuration Release --no-restore
 
+      - name: Configure AWS credentials (for SonarQube & Route 53 discovery)
+        if: env.AWS_ACCESS_KEY_ID != ''
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
       - name: Run SonarQube QA & Security Scan (if SONAR_HOST_URL is reachable)
         env:
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL || 'http://a89c266b705504783b7c6ba6be8b546e-467327433.us-east-1.elb.amazonaws.com:9000' }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
           SONAR_USER: ${{ secrets.SONAR_USER || 'admin' }}
           SONAR_PASSWORD: ${{ secrets.SONAR_PASSWORD || 'Sonar@2026' }}
         run: |
-          if curl -fsS --max-time 10 "${SONAR_HOST_URL}/api/system/status" | grep -q '"status":"UP"'; then
-            echo "SonarQube server is UP at ${SONAR_HOST_URL} — running sonar-scanner CLI..."
+          TARGET_URL="${SONAR_HOST_URL:-}"
+          if [ -z "$TARGET_URL" ] || ! curl -fsS --max-time 5 "${TARGET_URL}/api/system/status" 2>/dev/null | grep -q '"status":"UP"'; then
+            ZONE_NAME=$(aws route53 list-hosted-zones --query "HostedZones[?contains(Name, 'realhandsonlabs.net') && !Config.PrivateZone].Name | [0]" --output text 2>/dev/null | sed 's/\.$//' || true)
+            if [ -n "$ZONE_NAME" ] && [ "$ZONE_NAME" != "None" ]; then
+              if curl -fsS --max-time 5 "http://sonarqube.${ZONE_NAME}/api/system/status" 2>/dev/null | grep -q '"status":"UP"'; then
+                TARGET_URL="http://sonarqube.${ZONE_NAME}"
+              fi
+            fi
+          fi
+          if [ -n "$TARGET_URL" ] && curl -fsS --max-time 10 "${TARGET_URL}/api/system/status" 2>/dev/null | grep -q '"status":"UP"'; then
+            echo "SonarQube server is UP at ${TARGET_URL} — running sonar-scanner CLI..."
             docker run --rm \
               -v "${GITHUB_WORKSPACE}:/usr/src" \
               -w /usr/src \
               sonarsource/sonar-scanner-cli:latest \
-              -Dsonar.host.url="${SONAR_HOST_URL}" \
+              -Dsonar.host.url="${TARGET_URL}" \
               -Dsonar.login="${SONAR_USER}" \
               -Dsonar.password="${SONAR_PASSWORD}" \
               -Dsonar.projectKey=apps-demo-2026 \
@@ -67,7 +86,7 @@ jobs:
               -Dsonar.test.inclusions=**/test_*.py \
               -Dsonar.python.coverage.reportPaths=python-app/coverage.xml
           else
-            echo "SonarQube server at ${SONAR_HOST_URL} not currently reachable (demo account may be recreating); skipping remote upload."
+            echo "SonarQube server at ${TARGET_URL:-auto-discover} not currently reachable; skipping remote upload."
           fi
 
   build-and-test:
@@ -120,3 +139,48 @@ jobs:
           IMAGE="ghcr.io/cirodasilvaj/apps-demo-2026/${{ matrix.app.name }}"
           docker push "${IMAGE}:latest"
           docker push "${IMAGE}:${{ github.sha }}"
+
+  deploy-and-sync-dns:
+    name: Deploy to EKS & Register Route 53 DNS
+    needs: [build-and-test]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        if: env.AWS_ACCESS_KEY_ID != ''
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+      - name: Connect to EKS Cluster
+        if: env.AWS_ACCESS_KEY_ID != ''
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        run: |
+          aws eks update-kubeconfig --name kube-demo-eks --region "${{ secrets.AWS_REGION || 'us-east-1' }}" || true
+
+      - name: Apply Kubernetes Manifests & Sync Route 53 DNS
+        if: env.AWS_ACCESS_KEY_ID != ''
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        run: |
+          kubectl apply -f k8s/apps-demo.yaml || true
+          chmod +x scripts/sync-dns-route53.sh
+          ./scripts/sync-dns-route53.sh
+
+          ZONE_NAME=$(aws route53 list-hosted-zones --query "HostedZones[?contains(Name, 'realhandsonlabs.net') && !Config.PrivateZone].Name | [0]" --output text 2>/dev/null | sed 's/\.$//' || true)
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ] && [ -n "$ZONE_NAME" ] && [ "$ZONE_NAME" != "None" ]; then
+            echo "### 🌐 Apps Demo - Live Endpoints on Route 53" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Application | URL | Metrics |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
+            echo "| **Python 3.12 Flask App** | http://python.${ZONE_NAME} | http://python.${ZONE_NAME}/metrics |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| **.NET 8 C# Minimal API** | http://dotnet.${ZONE_NAME} | http://dotnet.${ZONE_NAME}/metrics |" >> "$GITHUB_STEP_SUMMARY"
+          fi

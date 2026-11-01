@@ -1,29 +1,29 @@
 # 🚀 Apps Demo 2026 (`cirodasilvaj/apps-demo-2026`)
 
-Repositório de aplicações Web de exemplo construídas em **diferentes linguagens de programação**, todas executando exatamente a mesma função ao serem acessadas:
+Sample web applications built in **different programming languages**, all performing the exact same function when accessed:
 
-- **Linguagem** utilizada pela aplicação
-- **Versão da Linguagem / Runtime** em execução
-- **IP do Solicitante (Client IP)** (`X-Forwarded-For`, `X-Real-IP` ou `RemoteAddr`)
-- **Hostname Local** (nome e IP do container / pod Kubernetes)
+- **Programming Language** used by the application
+- **Language / Runtime Version** currently executing
+- **Requester IP Address (Client IP)** (`X-Forwarded-For`, `X-Real-IP`, or `RemoteAddr`)
+- **Local Hostname** (container / Kubernetes pod hostname and IP)
 
 ---
 
-## 📦 Aplicações Disponíveis
+## 📦 Available Applications
 
-| App | Diretório | Linguagem / Stack | Porta Container | Porta Docker Compose |
+| App | Directory | Language / Stack | Container Port | Docker Compose Port |
 | :--- | :--- | :--- | :---: | :---: |
 | **Python App** | [`python-app/`](./python-app) | Python 3.12 + Flask + Gunicorn | `8080` | `8081` |
 | **.NET C# App** | [`dotnet-csharp-app/`](./dotnet-csharp-app) | C# 12 + .NET 8 Minimal API | `8080` | `8082` |
 
 ---
 
-## 🌐 Endpoints de Cada Aplicação
+## 🌐 Standardized Endpoints
 
-Todas as aplicações expõem os mesmos endpoints padronizados:
+Every application exposes the same standardized endpoints:
 
-- **`GET /`** — Interface Web HTML estilizada mostrando **Linguagem**, **Versão**, **IP do Solicitante** e **Hostname Local** (ou retorna JSON se enviado `?format=json` ou header `Accept: application/json`).
-- **`GET /api/info`** — Retorna os dados em formato JSON:
+- **`GET /`** — Styled HTML Web UI displaying **Language**, **Version**, **Client IP**, and **Local Hostname** (or returns JSON when queried with `?format=json` or `Accept: application/json`).
+- **`GET /api/info`** — Returns the metadata payload in JSON format:
   ```json
   {
     "language": "Python",
@@ -35,11 +35,11 @@ Todas as aplicações expõem os mesmos endpoints padronizados:
     "timestamp": "2026-10-31T20:55:00.000000+00:00"
   }
   ```
-- **`GET /healthz`** — Health check para probes de `readiness` e `liveness` do Kubernetes.
+- **`GET /healthz`** — Health check endpoint for Kubernetes `readiness` and `liveness` probes.
 
 ---
 
-## 🐳 Como Executar Localmente com Docker Compose
+## 🐳 Run Locally with Docker Compose
 
 ```bash
 docker compose up --build -d
@@ -50,14 +50,14 @@ docker compose up --build -d
 
 ---
 
-## ☸️ Como Fazer Deploy no Kubernetes (EKS / ArgoCD)
+## ☸️ Deploy to Kubernetes (EKS / ArgoCD)
 
 ```bash
 kubectl apply -f k8s/apps-demo.yaml
 kubectl get pods,svc -n apps-demo
 ```
 
-E para registrar no **Backstage Catalog**, importe a URL:
+To register in the **Backstage Catalog**, import the URL:
 ```text
 https://github.com/cirodasilvaj/apps-demo-2026/blob/main/catalog-info.yaml
 ```

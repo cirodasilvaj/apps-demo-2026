@@ -1,0 +1,45 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: python-demo-app
+  title: Python 3.12 Flask Microservice
+  description: App Web em Python 3.12 (Flask) instrumentada com Prometheus (/metrics), logs JSON enviados via Fluentd para o Grafana Loki e Quality Gate no SonarQube.
+  annotations:
+    github.com/project-slug: cirodasilvaj/apps-demo-2026
+    sonarqube.org/project-key: apps-demo-2026
+    backstage.io/kubernetes-id: python-app
+    backstage.io/kubernetes-namespace: apps-demo
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/metrics"
+    fluentd.io/destination: "loki"
+    grafana/dashboard-selector: "tag == 'python-demo-app'"
+    grafana/overview-dashboard: "http://a4d7780eb3b8344ca9b0e68513de8302-556188938.us-east-1.elb.amazonaws.com:3000/d/apps-prometheus-loki/8c87aef"
+  tags:
+    - python
+    - flask
+    - sonarqube
+    - prometheus
+    - fluentd
+    - loki
+    - grafana
+    - k8s
+  links:
+    - url: http://a5c964fc0c9ad45d5b0b5989900658c3-1985306500.us-east-1.elb.amazonaws.com
+      title: Python 3.12 Live App (LoadBalancer)
+      icon: web
+    - url: http://a5c964fc0c9ad45d5b0b5989900658c3-1985306500.us-east-1.elb.amazonaws.com/metrics
+      title: Prometheus Metrics (/metrics)
+      icon: gauge
+    - url: http://a4d7780eb3b8344ca9b0e68513de8302-556188938.us-east-1.elb.amazonaws.com:3000/d/apps-prometheus-loki/8c87aef
+      title: Grafana Dashboard (Prometheus & Loki Logs)
+      icon: dashboard
+    - url: http://aaf2ca7a1976745e4ab0a1e6d99d64ff-989575390.us-east-1.elb.amazonaws.com:9000/dashboard?id=apps-demo-2026
+      title: SonarQube Quality Gate
+      icon: check
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: apps-demo-2026
+  dependsOn:
+    - resource:default/kube-demo-eks

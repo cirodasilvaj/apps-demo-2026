@@ -42,8 +42,8 @@ jobs:
       - name: Build & Verify .NET 8 C# App
         working-directory: ./dotnet-csharp-app
         run: |
-          dotnet restore DotnetCsharpApp.csproj
-          dotnet build DotnetCsharpApp.csproj --configuration Release --no-restore
+          dotnet restore DotnetDemoApp.csproj
+          dotnet build DotnetDemoApp.csproj --configuration Release --no-restore
 
       - name: Run SonarQube QA & Security Scan (if SONAR_HOST_URL is reachable)
         env:

@@ -24,7 +24,7 @@ metadata:
     fluentd.io/destination: "loki"
     grafana/dashboard-selector: "python-demo-app"
     grafana/tag-selector: "service:python-demo-app"
-    grafana/overview-dashboard: "http://grafana.799416476486.realhandsonlabs.net/d/python-demo-app-dashboard/cd51c12"
+    grafana/overview-dashboard: "http://grafana.992382723408.realhandsonlabs.net/d/python-demo-app-dashboard/cd51c12"
     argocd/app-name: python-app
   tags:
     - python
@@ -40,22 +40,22 @@ metadata:
     - url: https://github.com/cirodasilvaj/apps-demo-2026/tree/main/python-app
       title: GitHub Source Code
       icon: github
-    - url: http://python.799416476486.realhandsonlabs.net
+    - url: http://python.992382723408.realhandsonlabs.net
       title: Python 3.12 Live App (HTTP)
       icon: web
-    - url: https://python.799416476486.realhandsonlabs.net
+    - url: https://python.992382723408.realhandsonlabs.net
       title: Python 3.12 Live App (HTTPS ACM)
       icon: lock
-    - url: http://python.799416476486.realhandsonlabs.net/metrics
+    - url: http://python.992382723408.realhandsonlabs.net/metrics
       title: Prometheus Metrics (/metrics)
       icon: gauge
-    - url: http://grafana.799416476486.realhandsonlabs.net/d/apps-prometheus-loki/8c87aef
+    - url: http://grafana.992382723408.realhandsonlabs.net/d/apps-prometheus-loki/8c87aef
       title: Grafana Dashboard (Prometheus & Loki Logs)
       icon: dashboard
-    - url: http://sonarqube.799416476486.realhandsonlabs.net/dashboard?id=apps-demo-2026
+    - url: http://sonarqube.992382723408.realhandsonlabs.net/dashboard?id=apps-demo-2026
       title: SonarQube Quality Gate
       icon: check
-    - url: https://argocd.799416476486.realhandsonlabs.net/applications/python-app
+    - url: https://argocd.992382723408.realhandsonlabs.net/applications/python-app
       title: ArgoCD GitOps
       icon: sync
 spec:
@@ -85,7 +85,7 @@ metadata:
     fluentd.io/destination: "loki"
     grafana/dashboard-selector: "dotnet-csharp-demo-app"
     grafana/tag-selector: "service:dotnet-csharp-demo-app"
-    grafana/overview-dashboard: "http://grafana.799416476486.realhandsonlabs.net/d/dotnet-csharp-demo-app-dashboard/dd0f8fe"
+    grafana/overview-dashboard: "http://grafana.992382723408.realhandsonlabs.net/d/dotnet-csharp-demo-app-dashboard/dd0f8fe"
     argocd/app-name: dotnet-csharp-app
   tags:
     - dotnet
@@ -101,22 +101,22 @@ metadata:
     - url: https://github.com/cirodasilvaj/apps-demo-2026/tree/main/dotnet-csharp-app
       title: GitHub Source Code
       icon: github
-    - url: http://dotnet.799416476486.realhandsonlabs.net
+    - url: http://dotnet.992382723408.realhandsonlabs.net
       title: .NET 8 C# Live App (HTTP)
       icon: web
-    - url: https://dotnet.799416476486.realhandsonlabs.net
+    - url: https://dotnet.992382723408.realhandsonlabs.net
       title: .NET 8 C# Live App (HTTPS ACM)
       icon: lock
-    - url: http://dotnet.799416476486.realhandsonlabs.net/metrics
+    - url: http://dotnet.992382723408.realhandsonlabs.net/metrics
       title: Prometheus Metrics (/metrics)
       icon: gauge
-    - url: http://grafana.799416476486.realhandsonlabs.net/d/apps-prometheus-loki/8c87aef
+    - url: http://grafana.992382723408.realhandsonlabs.net/d/apps-prometheus-loki/8c87aef
       title: Grafana Dashboard (Prometheus & Loki Logs)
       icon: dashboard
-    - url: http://sonarqube.799416476486.realhandsonlabs.net/dashboard?id=apps-demo-2026
+    - url: http://sonarqube.992382723408.realhandsonlabs.net/dashboard?id=apps-demo-2026
       title: SonarQube Quality Gate
       icon: check
-    - url: https://argocd.799416476486.realhandsonlabs.net/applications/dotnet-csharp-app
+    - url: https://argocd.992382723408.realhandsonlabs.net/applications/dotnet-csharp-app
       title: ArgoCD GitOps
       icon: sync
 spec:

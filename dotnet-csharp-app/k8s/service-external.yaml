@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: dotnet-csharp-app-external
+  namespace: apps-demo
+  labels:
+    app.kubernetes.io/name: dotnet-csharp-app
+    app.kubernetes.io/instance: dotnet-app-prod
+    app.kubernetes.io/component: backend-api
+    app.kubernetes.io/part-of: apps-demo-2026
+    app.kubernetes.io/managed-by: argocd
+    environment: sandbox
+    cost-center: devops-platform-cloud
+    cloud-provider: aws
+    source-project: apps-demo-2026
+    owner: platform-team
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "http"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:us-east-1:799416476486:certificate/e1db1a7e-d66b-4137-a9cb-3839e2711001"
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: dotnet-csharp-app
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+    - name: https
+      port: 443
+      targetPort: 8080

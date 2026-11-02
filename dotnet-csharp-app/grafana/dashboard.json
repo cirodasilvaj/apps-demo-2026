@@ -1,0 +1,75 @@
+{
+  "overwrite": true,
+  "dashboard": {
+    "uid": "dotnet-csharp-demo-app-dashboard",
+    "title": "Service: dotnet-csharp-demo-app (.NET 8 C# Minimal API) — Golden Signals",
+    "tags": ["service:dotnet-csharp-demo-app", "dotnet", "csharp", "prometheus", "loki", "fluentd", "gold-signals"],
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "refresh": "15s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Throughput / Request Rate (RPS) — dotnet-csharp-demo-app",
+        "type": "timeseries",
+        "gridPos": { "h": 7, "w": 8, "x": 0, "y": 0 },
+        "datasource": { "type": "prometheus", "uid": "prometheus-eks" },
+        "targets": [
+          {
+            "expr": "sum by (endpoint) (app_http_requests_total{app=\"dotnet-csharp-app\"})",
+            "legendFormat": "{{endpoint}}"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": ".NET 8 Uptime & CPU Usage (Prometheus)",
+        "type": "timeseries",
+        "gridPos": { "h": 7, "w": 8, "x": 8, "y": 0 },
+        "datasource": { "type": "prometheus", "uid": "prometheus-eks" },
+        "targets": [
+          {
+            "expr": "app_uptime_seconds{app=\"dotnet-csharp-app\"}",
+            "legendFormat": "uptime (s)"
+          },
+          {
+            "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{pod=~\"dotnet-csharp-app.*\",container!=\"\"}[5m]))",
+            "legendFormat": "CPU: {{pod}}"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": ".NET Pod Memory Working Set (Prometheus)",
+        "type": "timeseries",
+        "gridPos": { "h": 7, "w": 8, "x": 16, "y": 0 },
+        "datasource": { "type": "prometheus", "uid": "prometheus-eks" },
+        "targets": [
+          {
+            "expr": "sum by (pod) (container_memory_working_set_bytes{pod=~\"dotnet-csharp-app.*\",container!=\"\"})",
+            "legendFormat": "{{pod}}"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Real-time Live Logs (Fluentd -> Loki)",
+        "type": "logs",
+        "gridPos": { "h": 10, "w": 24, "x": 0, "y": 7 },
+        "datasource": { "type": "loki", "uid": "loki-eks" },
+        "options": {
+          "showTime": true,
+          "showLabels": true,
+          "wrapLogMessage": true,
+          "enableLogDetails": true,
+          "sortOrder": "Descending"
+        },
+        "targets": [
+          {
+            "expr": "{app=\"dotnet-csharp-app\"}"
+          }
+        ]
+      }
+    ]
+  }
+}

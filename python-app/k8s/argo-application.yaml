@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: python-app
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: python-app
+    app.kubernetes.io/part-of: apps-demo-2026
+    app.kubernetes.io/managed-by: argocd
+    environment: sandbox
+    cost-center: devops-platform-cloud
+    cloud-provider: aws
+    owner: platform-team
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/cirodasilvaj/apps-demo-2026.git
+    targetRevision: HEAD
+    path: python-app/k8s
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: apps-demo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

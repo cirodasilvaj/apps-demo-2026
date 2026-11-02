@@ -3,16 +3,19 @@ kind: Component
 metadata:
   name: python-demo-app
   title: Python 3.12 Flask Microservice
-  description: App Web em Python 3.12 (Flask) instrumentada com Prometheus (/metrics), logs JSON enviados via Fluentd para o Grafana Loki e Quality Gate no SonarQube.
+  description: App Web em Python 3.12 (Flask) com Prometheus metrics, logs JSON para Grafana Loki, SonarQube Quality Gate, GitOps via ArgoCD e HTTPS via AWS ACM.
   annotations:
+    backstage.io/techdocs-ref: dir:.
     sonarqube.org/project-key: apps-demo-2026
     backstage.io/kubernetes-id: python-app
     backstage.io/kubernetes-namespace: apps-demo
     prometheus.io/scrape: "true"
     prometheus.io/path: "/metrics"
     fluentd.io/destination: "loki"
-    grafana/dashboard-selector: "tag == 'python-demo-app'"
-    grafana/overview-dashboard: "http://grafana.realhandsonlabs.net/d/apps-prometheus-loki/8c87aef"
+    grafana/dashboard-selector: "python-demo-app"
+    grafana/tag-selector: "service:python-demo-app"
+    grafana/overview-dashboard: "http://grafana.799416476486.realhandsonlabs.net/d/python-demo-app-dashboard/cd51c12"
+    argocd/app-name: python-app
   tags:
     - python
     - flask
@@ -22,26 +25,83 @@ metadata:
     - loki
     - grafana
     - k8s
+    - argocd
   links:
     - url: https://github.com/cirodasilvaj/apps-demo-2026/tree/main/python-app
       title: GitHub Source Code
       icon: github
-    - url: http://python.realhandsonlabs.net
-      title: Python 3.12 Live App (Route 53)
+    - url: http://python.799416476486.realhandsonlabs.net
+      title: Python 3.12 Live App (HTTP)
       icon: web
-    - url: http://python.realhandsonlabs.net/metrics
+    - url: https://python.799416476486.realhandsonlabs.net
+      title: Python 3.12 Live App (HTTPS ACM)
+      icon: lock
+    - url: http://python.799416476486.realhandsonlabs.net/metrics
       title: Prometheus Metrics (/metrics)
       icon: gauge
-    - url: http://grafana.realhandsonlabs.net
-      title: Grafana Dashboard (Prometheus & Loki Logs)
+    - url: http://grafana.799416476486.realhandsonlabs.net/d/python-demo-app-dashboard/cd51c12
+      title: Grafana Dashboard (Golden Signals & Loki Logs)
       icon: dashboard
-    - url: http://sonarqube.realhandsonlabs.net/dashboard?id=apps-demo-2026
+    - url: http://sonarqube.799416476486.realhandsonlabs.net/dashboard?id=apps-demo-2026
       title: SonarQube Quality Gate
       icon: check
+    - url: https://argocd.799416476486.realhandsonlabs.net/applications/python-app
+      title: ArgoCD GitOps
+      icon: sync
 spec:
   type: service
   lifecycle: production
   owner: platform-team
   system: apps-demo-2026
+  providesApis:
+    - python-app-api
   dependsOn:
     - resource:default/kube-demo-eks
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: python-app-api
+  title: Python Flask App REST API
+  description: Interface REST para consulta de status, saúde e telemetria da aplicação Python
+spec:
+  type: openapi
+  lifecycle: production
+  owner: platform-team
+  system: apps-demo-2026
+  definition: |
+    openapi: "3.0.0"
+    info:
+      title: Python App API
+      version: "1.0.0"
+    paths:
+      /:
+        get:
+          summary: Overview & HTML Dashboard
+          responses:
+            '200':
+              description: OK
+      /api/info:
+        get:
+          summary: System & client runtime information
+          responses:
+            '200':
+              description: OK
+      /healthz:
+        get:
+          summary: Liveness probe
+          responses:
+            '200':
+              description: OK
+      /ready:
+        get:
+          summary: Readiness probe
+          responses:
+            '200':
+              description: OK
+      /metrics:
+        get:
+          summary: Prometheus metrics
+          responses:
+            '200':
+              description: OK

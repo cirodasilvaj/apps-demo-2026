@@ -28,17 +28,24 @@ long requestsApiInfo = 0;
 long requestsHealthz = 0;
 long requestsMetrics = 0;
 
-void EmitFluentdLog(string eventName, string path, string clientIp)
+void EmitFluentdLog(string eventName, string path, string clientIp, string method = "GET", int statusCode = 200, double durationMs = 0.0)
 {
     var logRecord = new
     {
-        time = DateTime.UtcNow.ToString("O"),
+        timestamp = DateTime.UtcNow.ToString("O"),
+        level = statusCode < 400 ? "INFO" : "ERROR",
+        service = "dotnet-csharp-app",
         app = "dotnet-csharp-app",
         language = LanguageName,
         @event = eventName,
-        path,
+        message = $"{method} {path} - {statusCode} ({durationMs:F2}ms)",
+        http_method = method,
+        endpoint = path,
+        status_code = statusCode,
+        duration_ms = Math.Round(durationMs, 2),
         client_ip = clientIp,
         hostname = Dns.GetHostName(),
+        trace_id = "trace-default",
         fluentd_target = $"{fluentdHost}:{fluentdPort}"
     };
     Console.WriteLine(JsonSerializer.Serialize(logRecord));
@@ -273,6 +280,16 @@ app.MapGet("/healthz", () =>
     return Results.Json(new
     {
         status = "ok",
+        language = LanguageName,
+        hostname = Dns.GetHostName()
+    });
+});
+
+app.MapGet("/ready", () =>
+{
+    return Results.Json(new
+    {
+        status = "ready",
         language = LanguageName,
         hostname = Dns.GetHostName()
     });

@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dotnet-csharp-app
+  namespace: apps-demo
+  labels:
+    app.kubernetes.io/name: dotnet-csharp-app
+    app.kubernetes.io/instance: dotnet-app-prod
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: backend-api
+    app.kubernetes.io/part-of: apps-demo-2026
+    app.kubernetes.io/managed-by: argocd
+    app.kubernetes.io/created-by: backstage-scaffolder
+    environment: sandbox
+    cost-center: devops-platform-cloud
+    cloud-provider: aws
+    source-project: apps-demo-2026
+    owner: platform-team
+    backstage.io/kubernetes-id: dotnet-csharp-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dotnet-csharp-app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dotnet-csharp-app
+        app.kubernetes.io/instance: dotnet-app-prod
+        app.kubernetes.io/version: "1.0.0"
+        app.kubernetes.io/component: backend-api
+        app.kubernetes.io/part-of: apps-demo-2026
+        app.kubernetes.io/managed-by: argocd
+        app.kubernetes.io/created-by: backstage-scaffolder
+        environment: sandbox
+        cost-center: devops-platform-cloud
+        cloud-provider: aws
+        source-project: apps-demo-2026
+        owner: platform-team
+        backstage.io/kubernetes-id: dotnet-csharp-app
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+        fluentd.io/collect: "true"
+        fluentd.io/parser: "json"
+        fluentd.io/destination: "loki"
+    spec:
+      containers:
+        - name: dotnet-csharp-app
+          image: ghcr.io/cirodasilvaj/apps-demo-2026/dotnet-csharp-app:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: APP_NAME
+              value: "dotnet-csharp-app"
+            - name: APP_VERSION
+              value: "1.0.0"
+            - name: FLUENTD_HOST
+              value: "fluentd.logging.svc.cluster.local"
+            - name: FLUENTD_PORT
+              value: "24224"
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dotnet-csharp-app
+  namespace: apps-demo
+  labels:
+    app.kubernetes.io/name: dotnet-csharp-app
+    app.kubernetes.io/instance: dotnet-app-prod
+    app.kubernetes.io/component: backend-api
+    app.kubernetes.io/part-of: apps-demo-2026
+    app.kubernetes.io/managed-by: argocd
+    environment: sandbox
+    cost-center: devops-platform-cloud
+    cloud-provider: aws
+    source-project: apps-demo-2026
+    owner: platform-team
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: dotnet-csharp-app
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080

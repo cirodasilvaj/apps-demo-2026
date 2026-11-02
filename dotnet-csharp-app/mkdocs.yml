@@ -1,0 +1,6 @@
+site_name: .NET 8 C# Minimal API Microservice
+site_description: Documentation for dotnet-csharp-demo-app on Backstage IDP
+plugins:
+  - techdocs-core
+nav:
+  - Overview: index.md

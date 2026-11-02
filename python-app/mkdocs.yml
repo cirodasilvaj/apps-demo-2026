@@ -1,0 +1,6 @@
+site_name: Python 3.12 Flask Microservice
+site_description: Documentation for python-demo-app on Backstage IDP
+plugins:
+  - techdocs-core
+nav:
+  - Overview: index.md

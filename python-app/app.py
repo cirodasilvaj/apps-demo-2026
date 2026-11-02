@@ -24,15 +24,30 @@ METRICS_COUNTERS = {
 }
 
 
-def emit_fluentd_log(event_type: str, path: str, client_ip: str) -> None:
+def emit_fluentd_log(event_type: str, path: str, client_ip: str, status_code: int = 200, duration_ms: float = 0.0) -> None:
+    trace_id = "trace-default"
+    method = "GET"
+    if request:
+        try:
+            trace_id = request.headers.get("X-Trace-Id", request.headers.get("X-Request-Id", "trace-default"))
+            method = request.method
+        except RuntimeError:
+            pass
     record = {
-        "time": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "level": "INFO" if status_code < 400 else "ERROR",
+        "service": "python-app",
         "app": "python-app",
         "language": LANGUAGE_NAME,
         "event": event_type,
-        "path": path,
+        "message": f"{method} {path} - {status_code} ({duration_ms:.2f}ms)",
+        "http_method": method,
+        "endpoint": path,
+        "status_code": status_code,
+        "duration_ms": round(duration_ms, 2),
         "client_ip": client_ip,
         "hostname": socket.gethostname(),
+        "trace_id": trace_id,
         "fluentd_target": f"{FLUENTD_HOST}:{FLUENTD_PORT}",
     }
     print(json.dumps(record), file=sys.stdout, flush=True)
@@ -245,6 +260,11 @@ def metrics():
 def healthz():
     METRICS_COUNTERS["/healthz"] += 1
     return jsonify({"status": "ok", "language": LANGUAGE_NAME, "hostname": socket.gethostname()})
+
+
+@app.route("/ready")
+def ready():
+    return jsonify({"status": "ready", "language": LANGUAGE_NAME, "hostname": socket.gethostname()})
 
 
 if __name__ == "__main__":

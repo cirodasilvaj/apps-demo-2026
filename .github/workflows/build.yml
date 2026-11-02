@@ -179,6 +179,30 @@ jobs:
         run: |
           aws eks update-kubeconfig --name kube-demo-eks --region "${{ secrets.AWS_REGION || 'us-east-1' }}" || true
 
+      - name: Provision Dashboards in Grafana (Dashboard-as-Code)
+        if: env.AWS_ACCESS_KEY_ID != ''
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        run: |
+          ZONE_NAME=$(aws route53 list-hosted-zones --query "HostedZones[?contains(Name, 'realhandsonlabs.net') && Config.PrivateZone == \`false\`].Name | [0]" --output text 2>/dev/null | sed 's/\.$//' || true)
+          if [ -z "$ZONE_NAME" ] || [ "$ZONE_NAME" = "None" ]; then
+            ZONE_NAME=$(aws route53 list-hosted-zones --query "HostedZones[?Config.PrivateZone == \`false\`].Name | [0]" --output text 2>/dev/null | sed 's/\.$//' || true)
+          fi
+          GRAFANA_URL="http://grafana.${ZONE_NAME}"
+          echo "📊 Checking Grafana API at ${GRAFANA_URL}..."
+          if curl -fsS --max-time 5 "${GRAFANA_URL}/api/health" >/dev/null 2>&1; then
+            if [ -f "python-app/grafana/dashboard.json" ]; then
+              echo "📈 Provisioning Python App Golden Signals Dashboard..."
+              curl -fsS -u "admin:Grafana@2026" -X POST "${GRAFANA_URL}/api/dashboards/db" \
+                -H "Content-Type: application/json" -d @python-app/grafana/dashboard.json || true
+            fi
+            if [ -f "dotnet-csharp-app/grafana/dashboard.json" ]; then
+              echo "📈 Provisioning .NET C# App Golden Signals Dashboard..."
+              curl -fsS -u "admin:Grafana@2026" -X POST "${GRAFANA_URL}/api/dashboards/db" \
+                -H "Content-Type: application/json" -d @dotnet-csharp-app/grafana/dashboard.json || true
+            fi
+          fi
+
       - name: Apply Kubernetes Manifests & Sync Route 53 DNS
         if: env.AWS_ACCESS_KEY_ID != ''
         env:
@@ -195,8 +219,8 @@ jobs:
           if [ -n "${GITHUB_STEP_SUMMARY:-}" ] && [ -n "$ZONE_NAME" ] && [ "$ZONE_NAME" != "None" ]; then
             echo "### 🌐 Apps Demo - Live Endpoints on Route 53" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "| Application | URL | Metrics |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Application | HTTP / HTTPS URL | Metrics |" >> "$GITHUB_STEP_SUMMARY"
             echo "|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
-            echo "| **Python 3.12 Flask App** | http://python.${ZONE_NAME} | http://python.${ZONE_NAME}/metrics |" >> "$GITHUB_STEP_SUMMARY"
-            echo "| **.NET 8 C# Minimal API** | http://dotnet.${ZONE_NAME} | http://dotnet.${ZONE_NAME}/metrics |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| **Python 3.12 Flask App** | https://python.${ZONE_NAME} (or http) | http://python.${ZONE_NAME}/metrics |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| **.NET 8 C# Minimal API** | https://dotnet.${ZONE_NAME} (or http) | http://dotnet.${ZONE_NAME}/metrics |" >> "$GITHUB_STEP_SUMMARY"
           fi

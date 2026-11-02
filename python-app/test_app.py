@@ -9,6 +9,13 @@ def test_healthz():
     assert res.get_json()["status"] == "ok"
 
 
+def test_ready():
+    client = app.test_client()
+    res = client.get("/ready")
+    assert res.status_code == 200
+    assert res.get_json()["status"] == "ready"
+
+
 def test_prometheus_metrics():
     client = app.test_client()
     res = client.get("/metrics")

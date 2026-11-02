@@ -14,6 +14,7 @@ metadata:
   title: Python 3.12 Flask Microservice
   description: App Web em Python 3.12 (Flask) com Prometheus metrics, logs JSON para Grafana Loki, SonarQube Quality Gate, GitOps via ArgoCD e HTTPS via AWS ACM.
   annotations:
+    github.com/project-slug: cirodasilvaj/apps-demo-2026
     backstage.io/techdocs-ref: dir:./python-app
     sonarqube.org/project-key: apps-demo-2026
     backstage.io/kubernetes-id: python-app
@@ -74,6 +75,7 @@ metadata:
   title: .NET 8 C# Minimal API Microservice
   description: App Web em C# (.NET 8 Minimal API) com Prometheus metrics, logs JSON para Grafana Loki, SonarQube Quality Gate, GitOps via ArgoCD e HTTPS via AWS ACM.
   annotations:
+    github.com/project-slug: cirodasilvaj/apps-demo-2026
     backstage.io/techdocs-ref: dir:./dotnet-csharp-app
     sonarqube.org/project-key: apps-demo-2026
     backstage.io/kubernetes-id: dotnet-csharp-app

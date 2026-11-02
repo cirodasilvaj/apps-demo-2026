@@ -1,0 +1,8 @@
+site_name: Apps Demo 2026 Ecosystem
+site_description: Enterprise microservices ecosystem with Python 3.12 Flask and .NET 8 C# Minimal API
+plugins:
+  - techdocs-core
+nav:
+  - Home: index.md
+  - Python App: python-app/docs/index.md
+  - .NET C# App: dotnet-csharp-app/docs/index.md
